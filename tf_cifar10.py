@@ -2,6 +2,7 @@ import cifar10, cifar10_input
 import tensorflow as tf
 import numpy as np
 import time
+import math
 
 def variable_with_weight_loss(shape, stddev, w1):
 	var = tf.Variable(tf.truncated_normal(shape, stddev=stddev))
@@ -67,3 +68,29 @@ top_k_op = tf.nn.in_top_k(logits, label_holder, 1)
 sess = tf.InteractiveSession()
 tf.global_variables_initializer().run()
 tf.train.start_queue_runners()
+
+for step in range(max_steps):
+	start_time = time.time()
+	image_batch, label_batch = sess.run([images_train, labels_train])
+	_, loss_value = sess.run([train_op, loss], {image_holder: image_batch, label_holder: label_batch})
+	duration = time.time() - start_time
+
+	if 0 == step % 10:
+		examples_per_sec = batch_size / duration
+		sec_per_batch = float(duration)
+		format_str = ('step %d, loss=%.2f (%.1f examples/sec; %.3f sec/batch)')
+		print(format_str % (step, loss_value, examples_per_sec, sec_per_batch))
+
+num_examples = 10000
+num_iter = int(math.ceil(num_examples / batch_size))
+true_count = 0
+total_sample_count = num_iter * batch_size
+step = 0
+while step < num_iter:
+	image_batch, label_batch = sess.run([images_test, labels_test])
+	predictions = sess.run([top_k_op], {image_holder: image_batch, label_holder: label_batch})
+	true_count += np.sum(predictions)
+	step += 1
+
+precision = true_count / total_sample_count
+print('precision @ 1 = .3f' % precision)
